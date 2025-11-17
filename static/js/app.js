@@ -98,7 +98,9 @@ async function apiRequest(endpoint, options = {}) {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.error || 'Request failed');
+            const error = new Error(data.error || 'Request failed');
+            error.status = response.status;
+            throw error;
         }
 
         return data;
@@ -237,7 +239,15 @@ async function loadUserProfile() {
         return data;
     } catch (error) {
         console.error('Failed to load user profile:', error);
-        logout();
+        // Only logout if it's an authentication error (401 or 403)
+        // For other errors (network issues, server errors), don't force logout
+        if (error.status === 401 || error.status === 403) {
+            console.error('Authentication failed, logging out');
+            logout();
+        } else {
+            // For other errors, just throw so the caller can handle it
+            throw error;
+        }
     }
 }
 

@@ -114,28 +114,31 @@
         async function loadDashboard() {
             try {
                 const user = await loadUserProfile();
-                document.getElementById('userName').textContent = user.first_name + ' ' + user.last_name;
+                if (user) {
+                    document.getElementById('userName').textContent = user.first_name + ' ' + user.last_name;
 
-                counsellorProfile = user.counsellor_profile;
+                    counsellorProfile = user.counsellor_profile;
 
-                // Update profile status
-                document.getElementById('verificationStatus').textContent = counsellorProfile.verification_status.toUpperCase();
-                document.getElementById('verificationStatus').className = `badge badge-${
-                    counsellorProfile.verification_status === 'verified' ? 'success' :
-                    counsellorProfile.verification_status === 'pending' ? 'warning' : 'danger'
-                }`;
+                    // Update profile status
+                    document.getElementById('verificationStatus').textContent = counsellorProfile.verification_status.toUpperCase();
+                    document.getElementById('verificationStatus').className = `badge badge-${
+                        counsellorProfile.verification_status === 'verified' ? 'success' :
+                        counsellorProfile.verification_status === 'pending' ? 'warning' : 'danger'
+                    }`;
 
-                document.getElementById('availabilityStatus').textContent = counsellorProfile.is_available ? 'Available' : 'Not Available';
-                document.getElementById('hourlyRate').textContent = counsellorProfile.hourly_rate;
+                    document.getElementById('availabilityStatus').textContent = counsellorProfile.is_available ? 'Available' : 'Not Available';
+                    document.getElementById('hourlyRate').textContent = counsellorProfile.hourly_rate;
 
-                // Update stats
-                document.getElementById('totalSessions').textContent = counsellorProfile.total_sessions || 0;
-                document.getElementById('rating').textContent = parseFloat(counsellorProfile.rating || 0).toFixed(1);
+                    // Update stats
+                    document.getElementById('totalSessions').textContent = counsellorProfile.total_sessions || 0;
+                    document.getElementById('rating').textContent = parseFloat(counsellorProfile.rating || 0).toFixed(1);
 
-                await loadBookings();
-                await loadWalletInfo();
+                    await loadBookings();
+                    await loadWalletInfo();
+                }
             } catch (error) {
-                showNotification('Failed to load dashboard: ' + error.message, 'error');
+                console.error('Dashboard load error:', error);
+                showNotification('Failed to load dashboard. Please try refreshing the page.', 'error');
             }
         }
 

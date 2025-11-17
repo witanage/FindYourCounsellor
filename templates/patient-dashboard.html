@@ -124,11 +124,13 @@
         async function loadDashboard() {
             try {
                 const user = await loadUserProfile();
-                document.getElementById('userName').textContent = user.first_name;
-
-                await loadMyBookings();
+                if (user) {
+                    document.getElementById('userName').textContent = user.first_name;
+                    await loadMyBookings();
+                }
             } catch (error) {
-                showNotification('Failed to load dashboard: ' + error.message, 'error');
+                console.error('Dashboard load error:', error);
+                showNotification('Failed to load dashboard. Please try refreshing the page.', 'error');
             }
         }
 

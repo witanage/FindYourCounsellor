@@ -67,16 +67,14 @@
 
                 showNotification('Login successful!', 'success');
 
-                // Redirect based on user type
-                setTimeout(() => {
-                    if (data.user.user_type === 'patient') {
-                        window.location.href = 'patient-dashboard.html';
-                    } else if (data.user.user_type === 'counsellor') {
-                        window.location.href = 'counsellor-dashboard.html';
-                    } else if (data.user.user_type === 'admin') {
-                        window.location.href = 'admin-dashboard.html';
-                    }
-                }, 1000);
+                // Redirect based on user type immediately
+                if (data.user.user_type === 'patient') {
+                    window.location.href = 'patient-dashboard.html';
+                } else if (data.user.user_type === 'counsellor') {
+                    window.location.href = 'counsellor-dashboard.html';
+                } else if (data.user.user_type === 'admin') {
+                    window.location.href = 'admin-dashboard.html';
+                }
             } catch (error) {
                 showNotification(error.message, 'error');
             }
