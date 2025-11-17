@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counsellor Dashboard - FindYourCounsellor</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">FindYourCounsellor</a>
+            <ul class="navbar-menu">
+                <li><a href="counsellor-dashboard.html">Dashboard</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="dashboard">
+        <div class="container">
+            <div class="dashboard-header">
+                <h1>Counsellor Dashboard</h1>
+                <p>Welcome back, Dr. <span id="userName"></span></p>
+            </div>
+
+            <!-- Stats -->
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalSessions">0</div>
+                    <div class="stat-label">Total Sessions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="upcomingSessions">0</div>
+                    <div class="stat-label">Upcoming Sessions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="rating">0.0</div>
+                    <div class="stat-label">Average Rating</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="earnings">$0.00</div>
+                    <div class="stat-label">Total Earnings</div>
+                </div>
+            </div>
+
+            <!-- Profile Status -->
+            <div class="card mb-3">
+                <div class="card-header">Profile Status</div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p><strong>Verification Status:</strong> <span id="verificationStatus" class="badge"></span></p>
+                        <p><strong>Availability:</strong> <span id="availabilityStatus"></span></p>
+                        <p><strong>Hourly Rate:</strong> $<span id="hourlyRate">0</span>/hour</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" onclick="toggleAvailability()">Toggle Availability</button>
+                        <button class="btn btn-secondary" onclick="openProfileEdit()">Edit Profile</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session Requests -->
+            <div class="card mb-3">
+                <div class="card-header">Pending Session Requests</div>
+                <div id="pendingRequests">
+                    <p class="text-center">Loading...</p>
+                </div>
+            </div>
+
+            <!-- Bookings -->
+            <div class="card">
+                <div class="card-header">My Sessions</div>
+
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color);">
+                    <button class="tab-btn active" data-tab="all" onclick="switchTab('all')">All</button>
+                    <button class="tab-btn" data-tab="upcoming" onclick="switchTab('upcoming')">Upcoming</button>
+                    <button class="tab-btn" data-tab="completed" onclick="switchTab('completed')">Completed</button>
+                </div>
+
+                <div id="bookingsContainer">
+                    <p class="text-center">Loading your sessions...</p>
+                </div>
+            </div>
+
+            <!-- Earnings -->
+            <div class="card mt-3">
+                <div class="card-header">Earnings & Wallet</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                    <div>
+                        <p><strong>Current Balance:</strong></p>
+                        <p style="font-size: 1.5rem; color: var(--primary-color);">$<span id="walletBalance">0.00</span></p>
+                    </div>
+                    <div>
+                        <p><strong>Total Earned:</strong></p>
+                        <p style="font-size: 1.5rem; color: var(--success-color);">$<span id="totalEarned">0.00</span></p>
+                    </div>
+                    <div>
+                        <p><strong>Total Withdrawn:</strong></p>
+                        <p style="font-size: 1.5rem; color: #6b7280;">$<span id="totalWithdrawn">0.00</span></p>
+                    </div>
+                </div>
+                <button class="btn btn-success mt-2" onclick="requestWithdrawal()">Request Withdrawal</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let allBookings = [];
+        let currentTab = 'all';
+        let counsellorProfile = null;
+
+        async function loadDashboard() {
+            try {
+                const user = await loadUserProfile();
+                document.getElementById('userName').textContent = user.first_name + ' ' + user.last_name;
+
+                counsellorProfile = user.counsellor_profile;
+
+                // Update profile status
+                document.getElementById('verificationStatus').textContent = counsellorProfile.verification_status.toUpperCase();
+                document.getElementById('verificationStatus').className = `badge badge-${
+                    counsellorProfile.verification_status === 'verified' ? 'success' :
+                    counsellorProfile.verification_status === 'pending' ? 'warning' : 'danger'
+                }`;
+
+                document.getElementById('availabilityStatus').textContent = counsellorProfile.is_available ? 'Available' : 'Not Available';
+                document.getElementById('hourlyRate').textContent = counsellorProfile.hourly_rate;
+
+                // Update stats
+                document.getElementById('totalSessions').textContent = counsellorProfile.total_sessions || 0;
+                document.getElementById('rating').textContent = parseFloat(counsellorProfile.rating || 0).toFixed(1);
+
+                await loadBookings();
+                await loadWalletInfo();
+            } catch (error) {
+                showNotification('Failed to load dashboard: ' + error.message, 'error');
+            }
+        }
+
+        async function loadBookings() {
+            try {
+                const data = await getMyBookings();
+                allBookings = data.bookings;
+
+                // Update stats
+                const upcoming = allBookings.filter(b =>
+                    ['pending', 'confirmed'].includes(b.status) &&
+                    new Date(b.session_date) >= new Date()
+                ).length;
+                document.getElementById('upcomingSessions').textContent = upcoming;
+
+                displayPendingRequests();
+                displayBookings(currentTab);
+            } catch (error) {
+                document.getElementById('bookingsContainer').innerHTML = `
+                    <p class="text-center">Error loading bookings: ${error.message}</p>
+                `;
+            }
+        }
+
+        async function loadWalletInfo() {
+            try {
+                // In a real implementation, this would be a separate API call
+                // For now, we'll use placeholder data
+                document.getElementById('walletBalance').textContent = '0.00';
+                document.getElementById('totalEarned').textContent = '0.00';
+                document.getElementById('totalWithdrawn').textContent = '0.00';
+
+                // Calculate from bookings
+                const completedBookings = allBookings.filter(b => b.status === 'completed' && b.payment_status === 'paid');
+                const totalEarnings = completedBookings.reduce((sum, b) => sum + parseFloat(b.counsellor_payout || 0), 0);
+
+                document.getElementById('earnings').textContent = formatCurrency(totalEarnings);
+                document.getElementById('totalEarned').textContent = totalEarnings.toFixed(2);
+                document.getElementById('walletBalance').textContent = totalEarnings.toFixed(2);
+            } catch (error) {
+                console.error('Failed to load wallet info:', error);
+            }
+        }
+
+        function displayPendingRequests() {
+            const pending = allBookings.filter(b => b.status === 'pending');
+            const container = document.getElementById('pendingRequests');
+
+            if (pending.length === 0) {
+                container.innerHTML = '<p class="text-center">No pending requests</p>';
+                return;
+            }
+
+            container.innerHTML = pending.map(booking => `
+                <div class="card" style="margin-bottom: 1rem;">
+                    <h4>${booking.patient_first_name} ${booking.patient_last_name}</h4>
+                    <p>
+                        <strong>Date:</strong> ${formatDate(booking.session_date)}<br>
+                        <strong>Time:</strong> ${formatTime(booking.session_time)}<br>
+                        <strong>Duration:</strong> ${booking.duration} minutes<br>
+                        <strong>Type:</strong> ${booking.session_type}<br>
+                        <strong>Amount:</strong> ${formatCurrency(booking.booking_amount)} (Your payout: ${formatCurrency(booking.counsellor_payout)})
+                    </p>
+                    ${booking.patient_notes ? `<p><strong>Patient Notes:</strong> ${booking.patient_notes}</p>` : ''}
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-success" onclick="acceptBooking(${booking.id})">Accept</button>
+                        <button class="btn btn-danger" onclick="rejectBooking(${booking.id})">Decline</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.tab === tab) {
+                    btn.classList.add('active');
+                }
+            });
+            displayBookings(tab);
+        }
+
+        function displayBookings(filter) {
+            let bookings = allBookings;
+
+            if (filter === 'upcoming') {
+                bookings = bookings.filter(b =>
+                    ['confirmed'].includes(b.status) &&
+                    new Date(b.session_date) >= new Date()
+                );
+            } else if (filter === 'completed') {
+                bookings = bookings.filter(b => b.status === 'completed');
+            }
+
+            const container = document.getElementById('bookingsContainer');
+
+            if (bookings.length === 0) {
+                container.innerHTML = '<p class="text-center">No bookings found.</p>';
+                return;
+            }
+
+            container.innerHTML = bookings.map(booking => `
+                <div class="booking-card card status-${booking.status}">
+                    <div class="booking-header">
+                        <h3>${booking.patient_first_name} ${booking.patient_last_name}</h3>
+                        <span class="booking-status ${booking.status}">${booking.status.toUpperCase()}</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div>
+                            <strong>Date:</strong> ${formatDate(booking.session_date)}<br>
+                            <strong>Time:</strong> ${formatTime(booking.session_time)}<br>
+                            <strong>Duration:</strong> ${booking.duration} minutes
+                        </div>
+                        <div>
+                            <strong>Type:</strong> ${booking.session_type}<br>
+                            <strong>Your Payout:</strong> ${formatCurrency(booking.counsellor_payout)}<br>
+                            <strong>Payment:</strong> ${booking.payment_status}
+                        </div>
+                    </div>
+                    ${booking.patient_notes ? `<p class="mt-2"><strong>Patient Notes:</strong> ${booking.patient_notes}</p>` : ''}
+                    ${booking.status === 'confirmed' ? `
+                        <div class="mt-2">
+                            <button class="btn btn-success" onclick="markAsCompleted(${booking.id})">Mark as Completed</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function acceptBooking(bookingId) {
+            try {
+                await updateBookingStatus(bookingId, 'confirmed');
+                showNotification('Booking accepted successfully', 'success');
+                await loadBookings();
+            } catch (error) {
+                showNotification('Failed to accept booking: ' + error.message, 'error');
+            }
+        }
+
+        async function rejectBooking(bookingId) {
+            const reason = prompt('Please provide a reason for declining (optional):');
+            try {
+                await updateBookingStatus(bookingId, 'cancelled', reason || 'Declined by counsellor');
+                showNotification('Booking declined', 'info');
+                await loadBookings();
+            } catch (error) {
+                showNotification('Failed to decline booking: ' + error.message, 'error');
+            }
+        }
+
+        async function markAsCompleted(bookingId) {
+            if (!confirm('Mark this session as completed?')) return;
+
+            try {
+                await updateBookingStatus(bookingId, 'completed');
+                showNotification('Session marked as completed', 'success');
+                await loadBookings();
+                await loadWalletInfo();
+            } catch (error) {
+                showNotification('Failed to update session: ' + error.message, 'error');
+            }
+        }
+
+        async function toggleAvailability() {
+            try {
+                const newStatus = !counsellorProfile.is_available;
+                await apiRequest(`/counsellors/profile`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ is_available: newStatus })
+                });
+
+                counsellorProfile.is_available = newStatus;
+                document.getElementById('availabilityStatus').textContent = newStatus ? 'Available' : 'Not Available';
+                showNotification(`Availability ${newStatus ? 'enabled' : 'disabled'}`, 'success');
+            } catch (error) {
+                showNotification('Failed to update availability: ' + error.message, 'error');
+            }
+        }
+
+        function openProfileEdit() {
+            showNotification('Profile editing feature coming soon!', 'info');
+        }
+
+        function requestWithdrawal() {
+            showNotification('Withdrawal request feature coming soon!', 'info');
+        }
+
+        // Add custom styles for tabs
+        const style = document.createElement('style');
+        style.textContent = `
+            .tab-btn {
+                background: none;
+                border: none;
+                padding: 0.75rem 1.5rem;
+                cursor: pointer;
+                color: #6b7280;
+                font-weight: 500;
+                border-bottom: 2px solid transparent;
+                transition: all 0.3s;
+            }
+            .tab-btn.active {
+                color: var(--primary-color);
+                border-bottom-color: var(--primary-color);
+            }
+            .tab-btn:hover {
+                color: var(--primary-color);
+            }
+        `;
+        document.head.appendChild(style);
+
+        loadDashboard();
+    </script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - FindYourCounsellor</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card" style="max-width: 600px;">
+            <div class="auth-header">
+                <h1>Create Account</h1>
+                <p>Join FindYourCounsellor today</p>
+            </div>
+
+            <div class="mb-3 text-center">
+                <label style="margin-right: 2rem;">
+                    <input type="radio" name="userType" value="patient" checked> I'm looking for counselling
+                </label>
+                <label>
+                    <input type="radio" name="userType" value="counsellor"> I'm a counsellor
+                </label>
+            </div>
+
+            <form id="registerForm">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label">First Name</label>
+                        <input type="text" class="form-input" id="firstName" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" class="form-input" id="lastName" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-input" id="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="tel" class="form-input" id="phone">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="password" required minlength="6">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" class="form-input" id="confirmPassword" required>
+                </div>
+
+                <!-- Counsellor specific fields -->
+                <div id="counsellorFields" class="hidden">
+                    <h3 class="mt-3 mb-2">Professional Information</h3>
+
+                    <div class="form-group">
+                        <label class="form-label">License Number</label>
+                        <input type="text" class="form-input" id="licenseNumber">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Years of Experience</label>
+                        <input type="number" class="form-input" id="yearsExperience" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Hourly Rate ($)</label>
+                        <input type="number" class="form-input" id="hourlyRate" min="0" step="0.01">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Specializations (comma separated)</label>
+                        <input type="text" class="form-input" id="specializations" placeholder="e.g., Anxiety, Depression, Trauma">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Bio</label>
+                        <textarea class="form-textarea" id="bio" rows="4"></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block mt-3">Create Account</button>
+            </form>
+
+            <div class="text-center mt-3">
+                <p>Already have an account? <a href="login.html" style="color: var(--primary-color);">Login</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Override auth check
+        function initAuthCheck() {}
+
+        const userTypeRadios = document.querySelectorAll('input[name="userType"]');
+        const counsellorFields = document.getElementById('counsellorFields');
+
+        userTypeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'counsellor') {
+                    counsellorFields.classList.remove('hidden');
+                } else {
+                    counsellorFields.classList.add('hidden');
+                }
+            });
+        });
+
+        // Check URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('type') === 'counsellor') {
+            document.querySelector('input[value="counsellor"]').checked = true;
+            counsellorFields.classList.remove('hidden');
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPassword) {
+                showNotification('Passwords do not match', 'error');
+                return;
+            }
+
+            const userType = document.querySelector('input[name="userType"]:checked').value;
+
+            const userData = {
+                email: document.getElementById('email').value,
+                password: password,
+                first_name: document.getElementById('firstName').value,
+                last_name: document.getElementById('lastName').value,
+                phone: document.getElementById('phone').value,
+                user_type: userType
+            };
+
+            if (userType === 'counsellor') {
+                const specializations = document.getElementById('specializations').value
+                    .split(',')
+                    .map(s => s.trim())
+                    .filter(s => s);
+
+                userData.counsellor_profile = {
+                    license_number: document.getElementById('licenseNumber').value,
+                    years_of_experience: parseInt(document.getElementById('yearsExperience').value) || 0,
+                    hourly_rate: parseFloat(document.getElementById('hourlyRate').value) || 0,
+                    specializations: specializations,
+                    bio: document.getElementById('bio').value
+                };
+            }
+
+            try {
+                const data = await apiRequest('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify(userData)
+                });
+
+                showNotification('Registration successful!', 'success');
+
+                // Auto login
+                setToken(data.access_token);
+
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1500);
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

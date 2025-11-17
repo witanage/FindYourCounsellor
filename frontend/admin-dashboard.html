@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - FindYourCounsellor</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">FindYourCounsellor Admin</a>
+            <ul class="navbar-menu">
+                <li><a href="admin-dashboard.html">Dashboard</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="dashboard">
+        <div class="container">
+            <div class="dashboard-header">
+                <h1>Admin Dashboard</h1>
+                <p>Platform Management & Oversight</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-value">1,234</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">156</div>
+                    <div class="stat-label">Active Counsellors</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">2,456</div>
+                    <div class="stat-label">Total Bookings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">$45,678</div>
+                    <div class="stat-label">Platform Revenue</div>
+                </div>
+            </div>
+
+            <!-- Pending Verifications -->
+            <div class="card mb-3">
+                <div class="card-header">Pending Counsellor Verifications</div>
+                <div class="text-center" style="padding: 2rem;">
+                    <p>No pending verifications</p>
+                </div>
+            </div>
+
+            <!-- Recent Bookings -->
+            <div class="card mb-3">
+                <div class="card-header">Recent Bookings</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Patient</th>
+                            <th>Counsellor</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" class="text-center">No recent bookings</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Withdrawal Requests -->
+            <div class="card">
+                <div class="card-header">Withdrawal Requests</div>
+                <div class="text-center" style="padding: 2rem;">
+                    <p>No pending withdrawal requests</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        async function loadAdminDashboard() {
+            try {
+                const user = await loadUserProfile();
+                if (user.user_type !== 'admin') {
+                    showNotification('Access denied. Admin only.', 'error');
+                    setTimeout(() => window.location.href = 'index.html', 1500);
+                    return;
+                }
+
+                // Load admin-specific data here
+                showNotification('Admin dashboard loaded', 'info');
+            } catch (error) {
+                showNotification('Failed to load dashboard: ' + error.message, 'error');
+            }
+        }
+
+        loadAdminDashboard();
+    </script>
+</body>
+</html>
