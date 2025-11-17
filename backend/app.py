@@ -1,14 +1,22 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from datetime import datetime, date, time
 import json
+import os
 from decimal import Decimal
 
 from backend.config import Config
 from backend.models import User, CounsellorProfile, Booking, Payment, Review, Notification
 
-app = Flask(__name__)
+# Get the base directory (project root)
+basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Initialize Flask with custom template and static folders
+app = Flask(__name__,
+            template_folder=os.path.join(basedir, 'templates'),
+            static_folder=os.path.join(basedir, 'static'))
+
 app.config['JWT_SECRET_KEY'] = Config.JWT_SECRET_KEY
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = Config.JWT_ACCESS_TOKEN_EXPIRES
 app.config['SECRET_KEY'] = Config.SECRET_KEY
@@ -28,57 +36,47 @@ class CustomJSONEncoder(json.JSONEncoder):
 app.json_encoder = CustomJSONEncoder
 
 
-# ==================== ROOT & HEALTH ENDPOINTS ====================
+# ==================== FRONTEND ROUTES ====================
 
-@app.route('/', methods=['GET'])
-def root():
-    """Root endpoint with API information"""
-    return jsonify({
-        'service': 'FindYourCounsellor API',
-        'version': '1.0.0',
-        'status': 'running',
-        'api_base': '/api',
-        'documentation': {
-            'health': 'GET /api/health',
-            'authentication': {
-                'register': 'POST /api/auth/register',
-                'login': 'POST /api/auth/login',
-                'me': 'GET /api/auth/me'
-            },
-            'counsellors': {
-                'search': 'GET /api/counsellors/search',
-                'details': 'GET /api/counsellors/{id}',
-                'reviews': 'GET /api/counsellors/{id}/reviews'
-            },
-            'bookings': {
-                'create': 'POST /api/bookings',
-                'my_bookings': 'GET /api/bookings/my-bookings',
-                'details': 'GET /api/bookings/{id}',
-                'update_status': 'PUT /api/bookings/{id}/status'
-            },
-            'video_sessions': {
-                'create_room': 'POST /api/sessions/{booking_id}/room',
-                'join': 'GET /api/sessions/{booking_id}/join',
-                'start': 'PUT /api/sessions/{booking_id}/start',
-                'end': 'PUT /api/sessions/{booking_id}/end'
-            },
-            'payments': {
-                'create': 'POST /api/payments/create'
-            },
-            'reviews': {
-                'create': 'POST /api/reviews'
-            },
-            'notifications': {
-                'list': 'GET /api/notifications',
-                'mark_read': 'PUT /api/notifications/{id}/read'
-            },
-            'specializations': {
-                'list': 'GET /api/specializations'
-            }
-        },
-        'frontend_url': 'http://localhost:8000',
-        'note': 'This is the backend API. Frontend should be served separately on port 8000.'
-    }), 200
+@app.route('/')
+def index():
+    """Serve landing page"""
+    return render_template('index.html')
+
+@app.route('/login.html')
+def login_page():
+    """Serve login page"""
+    return render_template('login.html')
+
+@app.route('/register.html')
+def register_page():
+    """Serve registration page"""
+    return render_template('register.html')
+
+@app.route('/search.html')
+def search_page():
+    """Serve counsellor search page"""
+    return render_template('search.html')
+
+@app.route('/patient-dashboard.html')
+def patient_dashboard():
+    """Serve patient dashboard page"""
+    return render_template('patient-dashboard.html')
+
+@app.route('/counsellor-dashboard.html')
+def counsellor_dashboard():
+    """Serve counsellor dashboard page"""
+    return render_template('counsellor-dashboard.html')
+
+@app.route('/admin-dashboard.html')
+def admin_dashboard():
+    """Serve admin dashboard page"""
+    return render_template('admin-dashboard.html')
+
+@app.route('/video-session.html')
+def video_session():
+    """Serve video session page"""
+    return render_template('video-session.html')
 
 
 # ==================== AUTHENTICATION ENDPOINTS ====================

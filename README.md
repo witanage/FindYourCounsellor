@@ -49,15 +49,11 @@ A comprehensive counselling marketplace platform similar to Uber, connecting pat
 ```
 FindYourCounsellor/
 ├── backend/
-│   ├── app.py              # Main Flask application
+│   ├── app.py              # Main Flask application with API + frontend routes
 │   ├── config.py           # Configuration settings
 │   ├── database.py         # Database connection handler
 │   └── models.py           # Data models and business logic
-├── frontend/
-│   ├── css/
-│   │   └── styles.css      # Application styles
-│   ├── js/
-│   │   └── app.js          # JavaScript utilities and API calls
+├── templates/              # Flask HTML templates
 │   ├── index.html          # Landing page
 │   ├── login.html          # Login page
 │   ├── register.html       # Registration page
@@ -66,8 +62,14 @@ FindYourCounsellor/
 │   ├── counsellor-dashboard.html   # Counsellor dashboard
 │   ├── admin-dashboard.html        # Admin dashboard
 │   └── video-session.html          # Video/Audio conferencing interface
+├── static/                 # Flask static files
+│   ├── css/
+│   │   └── styles.css      # Application styles
+│   └── js/
+│       └── app.js          # JavaScript utilities and API calls
 ├── database/
 │   └── schema.sql          # Database schema
+├── main.py                 # Single entry point for the application
 ├── requirements.txt        # Python dependencies
 ├── .env.example           # Environment variables template
 └── README.md              # This file
@@ -142,43 +144,40 @@ pip install -r requirements.txt
 
 ### Step 5: Run the Application
 
-#### Start the Backend Server
+**One Command to Rule Them All!** 🚀
+
 ```bash
-cd backend
-python app.py
+python main.py
 ```
 
-The backend API will run on `http://localhost:5005`
+That's it! The application will start and serve both frontend and backend on a single port.
 
-#### Serve the Frontend
-You can use any static file server. Here are a few options:
-
-**Option 1: Python HTTP Server**
-```bash
-cd frontend
-python -m http.server 8000
+You'll see output like:
 ```
+======================================================================
+FindYourCounsellor - Counselling Marketplace Platform
+======================================================================
 
-**Option 2: Node.js http-server**
-```bash
-cd frontend
-npx http-server -p 8000
+🚀 Application Server starting...
+======================================================================
+
+📱 FRONTEND & BACKEND running on: http://localhost:5005
+
+🌐 Access the application:
+   Landing Page:        http://localhost:5005
+   Login:               http://localhost:5005/login.html
+   Register (Patient):  http://localhost:5005/register.html
+   Search Counsellors:  http://localhost:5005/search.html
 ```
-
-**Option 3: Live Server (VS Code Extension)**
-- Install the "Live Server" extension in VS Code
-- Right-click on `frontend/index.html`
-- Select "Open with Live Server"
-
-The frontend will be available at `http://localhost:8000`
 
 ### Step 6: Access the Application
-- **Landing Page**: http://localhost:8000
-- **Patient Registration**: http://localhost:8000/register.html
-- **Counsellor Registration**: http://localhost:8000/register.html?type=counsellor
-- **Login**: http://localhost:8000/login.html
+- **Landing Page**: http://localhost:5005
+- **Login**: http://localhost:5005/login.html
+- **Patient Registration**: http://localhost:5005/register.html
+- **Counsellor Registration**: http://localhost:5005/register.html?type=counsellor
+- **Search Counsellors**: http://localhost:5005/search.html
 - **Admin Login**: Use email: `admin@counselling.com`, password: `admin123`
-- **Backend API**: http://localhost:5005
+- **API Endpoints**: http://localhost:5005/api
 
 ## API Documentation
 

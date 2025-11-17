@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FindYourCounsellor - Connect with Licensed Counsellors</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">FindYourCounsellor</a>
+            <ul class="navbar-menu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Find Counsellors</a></li>
+                <li><a href="login.html">Login</a></li>
+                <li><a href="register.html">Sign Up</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Connect with Professional Counsellors Anytime, Anywhere</h1>
+            <p>Get expert mental health support from licensed counsellors on demand</p>
+            <a href="register.html" class="btn btn-primary">Get Started</a>
+        </div>
+    </section>
+
+    <!-- Search Section -->
+    <div class="container">
+        <div class="search-section">
+            <h2 class="text-center mb-3">Find Your Perfect Counsellor</h2>
+            <form id="quickSearchForm" class="search-form">
+                <div class="form-group">
+                    <select class="form-select" id="specialization">
+                        <option value="">All Specializations</option>
+                        <option value="Anxiety & Stress">Anxiety & Stress</option>
+                        <option value="Depression">Depression</option>
+                        <option value="Relationship Issues">Relationship Issues</option>
+                        <option value="Trauma & PTSD">Trauma & PTSD</option>
+                        <option value="Addiction">Addiction</option>
+                        <option value="Career Counseling">Career Counseling</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="text" class="form-input" id="city" placeholder="City">
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <section class="container" style="padding: 3rem 0;">
+        <h2 class="text-center mb-4">Why Choose FindYourCounsellor?</h2>
+        <div class="grid grid-3">
+            <div class="card text-center">
+                <h3>🔒 Secure & Confidential</h3>
+                <p>Your privacy is our priority. All sessions are completely confidential and secure.</p>
+            </div>
+            <div class="card text-center">
+                <h3>👨‍⚕️ Licensed Professionals</h3>
+                <p>Connect with verified, licensed counsellors who are experts in their field.</p>
+            </div>
+            <div class="card text-center">
+                <h3>⏰ Flexible Scheduling</h3>
+                <p>Book sessions that fit your schedule. Available 24/7 for your convenience.</p>
+            </div>
+            <div class="card text-center">
+                <h3>💻 Multiple Formats</h3>
+                <p>Choose from video, audio, or chat consultations based on your comfort.</p>
+            </div>
+            <div class="card text-center">
+                <h3>⭐ Rated & Reviewed</h3>
+                <p>Read reviews from real clients to find the perfect counsellor for you.</p>
+            </div>
+            <div class="card text-center">
+                <h3>💰 Transparent Pricing</h3>
+                <p>No hidden fees. See counsellor rates upfront and pay securely online.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="container" style="padding: 3rem 0; background-color: white; margin: 2rem auto; border-radius: 10px;">
+        <h2 class="text-center mb-4">How It Works</h2>
+        <div class="grid grid-3">
+            <div class="text-center">
+                <div style="font-size: 3rem; color: var(--primary-color);">1</div>
+                <h3>Search & Select</h3>
+                <p>Browse through our network of licensed counsellors and find the one that matches your needs.</p>
+            </div>
+            <div class="text-center">
+                <div style="font-size: 3rem; color: var(--primary-color);">2</div>
+                <h3>Book & Pay</h3>
+                <p>Choose a convenient time slot and securely pay for your session online.</p>
+            </div>
+            <div class="text-center">
+                <div style="font-size: 3rem; color: var(--primary-color);">3</div>
+                <h3>Connect & Heal</h3>
+                <p>Join your session via video, audio, or chat and start your journey to wellness.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="hero" style="margin-top: 3rem;">
+        <div class="container">
+            <h2>Ready to Take the First Step?</h2>
+            <p>Join thousands of people who have found support through our platform</p>
+            <a href="register.html" class="btn btn-primary" style="margin-right: 1rem;">Sign Up as Patient</a>
+            <a href="register.html?type=counsellor" class="btn btn-outline">Join as Counsellor</a>
+        </div>
+    </section>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        document.getElementById('quickSearchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const specialization = document.getElementById('specialization').value;
+            const city = document.getElementById('city').value;
+
+            let url = 'search.html?';
+            if (specialization) url += `specialization=${encodeURIComponent(specialization)}&`;
+            if (city) url += `city=${encodeURIComponent(city)}`;
+
+            window.location.href = url;
+        });
+
+        // Override auth check for landing page
+        function initAuthCheck() {
+            if (isAuthenticated()) {
+                updateNavigation();
+            }
+        }
+    </script>
+</body>
+</html>

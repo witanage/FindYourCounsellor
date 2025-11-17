@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - FindYourCounsellor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">FindYourCounsellor</a>
+            <ul class="navbar-menu">
+                <li><a href="patient-dashboard.html">Dashboard</a></li>
+                <li><a href="search.html">Find Counsellors</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="dashboard">
+        <div class="container">
+            <div class="dashboard-header">
+                <h1>My Dashboard</h1>
+                <p>Welcome back, <span id="userName"></span></p>
+            </div>
+
+            <!-- Stats -->
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalBookings">0</div>
+                    <div class="stat-label">Total Sessions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="upcomingBookings">0</div>
+                    <div class="stat-label">Upcoming Sessions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="completedBookings">0</div>
+                    <div class="stat-label">Completed Sessions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="pendingReviews">0</div>
+                    <div class="stat-label">Pending Reviews</div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-3">
+                <div class="card-header">Quick Actions</div>
+                <div style="display: flex; gap: 1rem;">
+                    <a href="search.html" class="btn btn-primary">Find Counsellor</a>
+                    <button class="btn btn-secondary" onclick="loadMyBookings()">Refresh Bookings</button>
+                </div>
+            </div>
+
+            <!-- Bookings Tabs -->
+            <div class="card">
+                <div class="card-header">My Sessions</div>
+
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color);">
+                    <button class="tab-btn active" data-tab="all" onclick="switchTab('all')">All</button>
+                    <button class="tab-btn" data-tab="upcoming" onclick="switchTab('upcoming')">Upcoming</button>
+                    <button class="tab-btn" data-tab="completed" onclick="switchTab('completed')">Completed</button>
+                    <button class="tab-btn" data-tab="cancelled" onclick="switchTab('cancelled')">Cancelled</button>
+                </div>
+
+                <div id="bookingsContainer">
+                    <p class="text-center">Loading your bookings...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Write a Review</h2>
+                <button class="modal-close" onclick="closeModal('reviewModal')">&times;</button>
+            </div>
+            <form id="reviewForm">
+                <input type="hidden" id="reviewBookingId">
+                <input type="hidden" id="reviewCounsellorId">
+
+                <div class="form-group">
+                    <label class="form-label">Rating</label>
+                    <div class="rating-input">
+                        <input type="radio" name="rating" value="5" id="star5" required>
+                        <label for="star5">⭐ 5 Stars</label><br>
+                        <input type="radio" name="rating" value="4" id="star4">
+                        <label for="star4">⭐ 4 Stars</label><br>
+                        <input type="radio" name="rating" value="3" id="star3">
+                        <label for="star3">⭐ 3 Stars</label><br>
+                        <input type="radio" name="rating" value="2" id="star2">
+                        <label for="star2">⭐ 2 Stars</label><br>
+                        <input type="radio" name="rating" value="1" id="star1">
+                        <label for="star1">⭐ 1 Star</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Your Review</label>
+                    <textarea class="form-textarea" id="reviewText" rows="4" placeholder="Share your experience..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="isAnonymous">
+                        Post anonymously
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Submit Review</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        let allBookings = [];
+        let currentTab = 'all';
+
+        async function loadDashboard() {
+            try {
+                const user = await loadUserProfile();
+                document.getElementById('userName').textContent = user.first_name;
+
+                await loadMyBookings();
+            } catch (error) {
+                showNotification('Failed to load dashboard: ' + error.message, 'error');
+            }
+        }
+
+        async function loadMyBookings() {
+            try {
+                const data = await getMyBookings();
+                allBookings = data.bookings;
+                updateStats();
+                displayBookings(currentTab);
+            } catch (error) {
+                document.getElementById('bookingsContainer').innerHTML = `
+                    <p class="text-center">Error loading bookings: ${error.message}</p>
+                `;
+            }
+        }
+
+        function updateStats() {
+            const total = allBookings.length;
+            const upcoming = allBookings.filter(b =>
+                ['pending', 'confirmed'].includes(b.status) &&
+                new Date(b.session_date) >= new Date()
+            ).length;
+            const completed = allBookings.filter(b => b.status === 'completed').length;
+            const needsReview = allBookings.filter(b => b.status === 'completed' && !b.has_review).length;
+
+            document.getElementById('totalBookings').textContent = total;
+            document.getElementById('upcomingBookings').textContent = upcoming;
+            document.getElementById('completedBookings').textContent = completed;
+            document.getElementById('pendingReviews').textContent = needsReview;
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.tab === tab) {
+                    btn.classList.add('active');
+                }
+            });
+            displayBookings(tab);
+        }
+
+        function displayBookings(filter) {
+            let bookings = allBookings;
+
+            if (filter === 'upcoming') {
+                bookings = bookings.filter(b =>
+                    ['pending', 'confirmed'].includes(b.status) &&
+                    new Date(b.session_date) >= new Date()
+                );
+            } else if (filter === 'completed') {
+                bookings = bookings.filter(b => b.status === 'completed');
+            } else if (filter === 'cancelled') {
+                bookings = bookings.filter(b => b.status === 'cancelled');
+            }
+
+            const container = document.getElementById('bookingsContainer');
+
+            if (bookings.length === 0) {
+                container.innerHTML = '<p class="text-center">No bookings found.</p>';
+                return;
+            }
+
+            container.innerHTML = bookings.map(booking => `
+                <div class="booking-card card status-${booking.status}">
+                    <div class="booking-header">
+                        <h3>${booking.counsellor_first_name} ${booking.counsellor_last_name}</h3>
+                        <span class="booking-status ${booking.status}">${booking.status.toUpperCase()}</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div>
+                            <strong>Date:</strong> ${formatDate(booking.session_date)}<br>
+                            <strong>Time:</strong> ${formatTime(booking.session_time)}<br>
+                            <strong>Duration:</strong> ${booking.duration} minutes
+                        </div>
+                        <div>
+                            <strong>Type:</strong> ${booking.session_type}<br>
+                            <strong>Amount:</strong> ${formatCurrency(booking.booking_amount)}<br>
+                            <strong>Payment:</strong> ${booking.payment_status}
+                        </div>
+                    </div>
+                    ${booking.patient_notes ? `<p class="mt-2"><strong>Notes:</strong> ${booking.patient_notes}</p>` : ''}
+                    <div class="mt-2" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        ${(booking.status === 'confirmed' || booking.status === 'in-progress') && (booking.session_type === 'video' || booking.session_type === 'audio') ? `
+                            <button class="btn btn-success" onclick="joinSession(${booking.id})" style="background: #10b981;">
+                                🎥 Join ${booking.session_type === 'video' ? 'Video' : 'Audio'} Session
+                            </button>
+                        ` : ''}
+                        ${booking.status === 'pending' || booking.status === 'confirmed' ? `
+                            <button class="btn btn-danger" onclick="cancelBooking(${booking.id})">Cancel</button>
+                        ` : ''}
+                        ${booking.status === 'completed' && !booking.has_review ? `
+                            <button class="btn btn-primary" onclick="openReviewModal(${booking.id}, ${booking.counsellor_id})">Write Review</button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function joinSession(bookingId) {
+            window.location.href = `video-session.html?booking_id=${bookingId}`;
+        }
+
+        async function cancelBooking(bookingId) {
+            if (!confirm('Are you sure you want to cancel this booking?')) return;
+
+            try {
+                await updateBookingStatus(bookingId, 'cancelled', 'Cancelled by patient');
+                showNotification('Booking cancelled successfully', 'success');
+                await loadMyBookings();
+            } catch (error) {
+                showNotification('Failed to cancel booking: ' + error.message, 'error');
+            }
+        }
+
+        function openReviewModal(bookingId, counsellorId) {
+            document.getElementById('reviewBookingId').value = bookingId;
+            document.getElementById('reviewCounsellorId').value = counsellorId;
+            openModal('reviewModal');
+        }
+
+        document.getElementById('reviewForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const reviewData = {
+                booking_id: parseInt(document.getElementById('reviewBookingId').value),
+                counsellor_id: parseInt(document.getElementById('reviewCounsellorId').value),
+                rating: parseInt(document.querySelector('input[name="rating"]:checked').value),
+                review_text: document.getElementById('reviewText').value,
+                is_anonymous: document.getElementById('isAnonymous').checked
+            };
+
+            try {
+                await createReview(reviewData);
+                showNotification('Review submitted successfully!', 'success');
+                closeModal('reviewModal');
+                await loadMyBookings();
+            } catch (error) {
+                showNotification('Failed to submit review: ' + error.message, 'error');
+            }
+        });
+
+        // Add custom styles for tabs
+        const style = document.createElement('style');
+        style.textContent = `
+            .tab-btn {
+                background: none;
+                border: none;
+                padding: 0.75rem 1.5rem;
+                cursor: pointer;
+                color: #6b7280;
+                font-weight: 500;
+                border-bottom: 2px solid transparent;
+                transition: all 0.3s;
+            }
+            .tab-btn.active {
+                color: var(--primary-color);
+                border-bottom-color: var(--primary-color);
+            }
+            .tab-btn:hover {
+                color: var(--primary-color);
+            }
+        `;
+        document.head.appendChild(style);
+
+        loadDashboard();
+    </script>
+</body>
+</html>

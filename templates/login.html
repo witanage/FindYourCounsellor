@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - FindYourCounsellor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Welcome Back</h1>
+                <p>Login to your FindYourCounsellor account</p>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-input" id="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="password" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Login</button>
+            </form>
+
+            <div class="text-center mt-3">
+                <p>Don't have an account? <a href="register.html" style="color: var(--primary-color);">Sign up</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Override auth check for login page
+        function initAuthCheck() {
+            if (isAuthenticated()) {
+                const user = getCurrentUser();
+                if (user.user_type === 'patient') {
+                    window.location.href = 'patient-dashboard.html';
+                } else if (user.user_type === 'counsellor') {
+                    window.location.href = 'counsellor-dashboard.html';
+                } else if (user.user_type === 'admin') {
+                    window.location.href = 'admin-dashboard.html';
+                }
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const data = await apiRequest('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+
+                setToken(data.access_token);
+                setCurrentUser(data.user);
+
+                showNotification('Login successful!', 'success');
+
+                // Redirect based on user type
+                setTimeout(() => {
+                    if (data.user.user_type === 'patient') {
+                        window.location.href = 'patient-dashboard.html';
+                    } else if (data.user.user_type === 'counsellor') {
+                        window.location.href = 'counsellor-dashboard.html';
+                    } else if (data.user.user_type === 'admin') {
+                        window.location.href = 'admin-dashboard.html';
+                    }
+                }, 1000);
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>
