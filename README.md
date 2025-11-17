@@ -10,6 +10,7 @@ A comprehensive counselling marketplace platform similar to Uber, connecting pat
 - 💳 **Secure Payments** - Integrated payment processing with Stripe
 - ⭐ **Reviews & Ratings** - Read and write reviews for counsellors
 - 📱 **Multiple Formats** - Video, audio, chat, or in-person consultations
+- 🎥 **Video/Audio Conferencing** - Built-in Jitsi Meet integration for secure video calls
 - 📊 **Dashboard** - Track all your bookings and sessions
 
 ### For Counsellors
@@ -18,6 +19,7 @@ A comprehensive counselling marketplace platform similar to Uber, connecting pat
 - 💰 **Earnings Tracking** - Monitor income and request withdrawals
 - 📈 **Performance Metrics** - View ratings, reviews, and session statistics
 - ✅ **Booking Management** - Accept/decline session requests
+- 🎥 **Video Sessions** - Conduct secure video/audio sessions with Jitsi Meet
 - 💬 **Client Communication** - Connect with patients through the platform
 
 ### For Administrators
@@ -39,6 +41,7 @@ A comprehensive counselling marketplace platform similar to Uber, connecting pat
 ### Frontend
 - **HTML5/CSS3** - Structure and styling
 - **Vanilla JavaScript** - No frameworks, pure JS
+- **Jitsi Meet** - Video/audio conferencing integration
 - **Responsive Design** - Mobile-friendly interface
 
 ## Project Structure
@@ -61,7 +64,8 @@ FindYourCounsellor/
 │   ├── search.html         # Counsellor search page
 │   ├── patient-dashboard.html      # Patient dashboard
 │   ├── counsellor-dashboard.html   # Counsellor dashboard
-│   └── admin-dashboard.html        # Admin dashboard
+│   ├── admin-dashboard.html        # Admin dashboard
+│   └── video-session.html          # Video/Audio conferencing interface
 ├── database/
 │   └── schema.sql          # Database schema
 ├── requirements.txt        # Python dependencies
@@ -354,12 +358,78 @@ PUT /notifications/{notification_id}/read
 Authorization: Bearer <token>
 ```
 
+#### Video Sessions
+
+**Create/Get Video Session Room**
+```http
+POST /sessions/{booking_id}/room
+Authorization: Bearer <token>
+```
+
+**Get Session Details for Joining**
+```http
+GET /sessions/{booking_id}/join
+Authorization: Bearer <token>
+```
+
+**Start Video Session**
+```http
+PUT /sessions/{booking_id}/start
+Authorization: Bearer <token>
+```
+
+**End Video Session**
+```http
+PUT /sessions/{booking_id}/end
+Authorization: Bearer <token>
+```
+
 #### Specializations
 
 **Get All Specializations**
 ```http
 GET /specializations
 ```
+
+## Video/Audio Conferencing
+
+The platform includes built-in video and audio conferencing powered by **Jitsi Meet**.
+
+### Features
+- **Secure Video Calls** - End-to-end encrypted sessions
+- **Audio-Only Mode** - For audio consultations
+- **Session Timer** - Real-time duration tracking
+- **Automatic Link Generation** - Secure room URLs created automatically
+- **Session Management** - Start/end tracking with notifications
+- **No Additional Setup** - Uses public Jitsi servers by default
+
+### How It Works
+
+1. **Booking Confirmation**: When a counsellor confirms a video/audio booking, a secure Jitsi Meet room is automatically created
+2. **Join Session**: Both patient and counsellor can click "Join Session" button from their dashboards
+3. **Full-Screen Interface**: Opens a dedicated video call page with:
+   - Session information (participants, duration, type)
+   - Real-time timer
+   - Full Jitsi Meet controls (mic, camera, screen share, chat)
+   - End session button
+4. **Session Status**: Automatically updates booking status to "in-progress" when started
+5. **Completion**: Either party can end the session, marking it as completed
+
+### Self-Hosting Jitsi (Optional)
+
+To use your own Jitsi Meet server instead of public servers:
+
+1. Install Jitsi Meet on your server (see [Jitsi documentation](https://jitsi.github.io/handbook/docs/devops-guide/devops-guide-quickstart))
+2. Update the domain in `backend/app.py`:
+   ```python
+   # Line 475 in app.py
+   session_link = f"https://your-jitsi-domain.com/{room_name}"
+   ```
+3. Update the domain in `frontend/video-session.html`:
+   ```javascript
+   // Line 242
+   const domain = 'your-jitsi-domain.com';
+   ```
 
 ## Database Schema
 
@@ -449,7 +519,7 @@ Example:
 
 ## Future Enhancements
 
-- [ ] Real-time video/audio calling integration
+- [x] Real-time video/audio calling integration (✅ Completed with Jitsi Meet)
 - [ ] SMS/Email notifications
 - [ ] Advanced search filters (insurance, languages, etc.)
 - [ ] Automated scheduling system
