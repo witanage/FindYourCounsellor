@@ -1,16 +1,42 @@
-# This is a sample Python script.
+#!/usr/bin/env python3
+"""
+FindYourCounsellor - Counselling Marketplace Platform
+Main entry point for the application
+"""
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+import sys
+import os
 
+# Add backend to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+from backend.app import app
 
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    print("=" * 60)
+    print("FindYourCounsellor - Counselling Marketplace Platform")
+    print("=" * 60)
+    print("\nBackend API Server starting...")
+    print("API will be available at: http://localhost:5000/api")
+    print("\nAvailable endpoints:")
+    print("  - POST   /api/auth/register")
+    print("  - POST   /api/auth/login")
+    print("  - GET    /api/auth/me")
+    print("  - GET    /api/counsellors/search")
+    print("  - POST   /api/bookings")
+    print("  - GET    /api/bookings/my-bookings")
+    print("  - POST   /api/payments/create")
+    print("  - POST   /api/reviews")
+    print("  - GET    /api/notifications")
+    print("  - GET    /api/specializations")
+    print("  - GET    /api/health")
+    print("\nAdmin Account:")
+    print("  Email: admin@counselling.com")
+    print("  Password: admin123")
+    print("\nMake sure MySQL is running and database is set up!")
+    print("Run: mysql -u root -p < database/schema.sql")
+    print("\nPress CTRL+C to stop the server")
+    print("=" * 60)
+    print()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    app.run(debug=True, host='0.0.0.0', port=5000)
