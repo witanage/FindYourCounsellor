@@ -1,6 +1,46 @@
 // API Configuration
 const API_URL = 'http://localhost:5005/api';
 
+// Theme Management
+function getTheme() {
+    return localStorage.getItem('theme') || 'light';
+}
+
+function setTheme(theme) {
+    localStorage.setItem('theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+}
+
+function toggleTheme() {
+    const currentTheme = getTheme();
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    updateThemeButton();
+}
+
+function updateThemeButton() {
+    const themeButton = document.getElementById('themeToggle');
+    if (themeButton) {
+        const currentTheme = getTheme();
+        const icon = themeButton.querySelector('.theme-toggle-icon');
+        const text = themeButton.querySelector('.theme-toggle-text');
+
+        if (currentTheme === 'dark') {
+            icon.textContent = '☀️';
+            text.textContent = 'Light';
+        } else {
+            icon.textContent = '🌙';
+            text.textContent = 'Dark';
+        }
+    }
+}
+
+function initTheme() {
+    const savedTheme = getTheme();
+    setTheme(savedTheme);
+    updateThemeButton();
+}
+
 // Utility Functions
 function getToken() {
     return localStorage.getItem('access_token');
@@ -165,6 +205,28 @@ function updateNavigation() {
         navMenu.innerHTML += dashboardLink;
         navMenu.innerHTML += '<li><a href="#" onclick="logout()" class="auth-link">Logout</a></li>';
     }
+
+    // Add theme toggle button if not exists
+    addThemeToggleButton();
+}
+
+// Add theme toggle button to navbar
+function addThemeToggleButton() {
+    const navMenu = document.querySelector('.navbar-menu');
+    if (navMenu && !document.getElementById('themeToggle')) {
+        const themeToggleItem = document.createElement('li');
+        const currentTheme = getTheme();
+        const icon = currentTheme === 'dark' ? '☀️' : '🌙';
+        const text = currentTheme === 'dark' ? 'Light' : 'Dark';
+
+        themeToggleItem.innerHTML = `
+            <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()">
+                <span class="theme-toggle-icon">${icon}</span>
+                <span class="theme-toggle-text">${text}</span>
+            </button>
+        `;
+        navMenu.appendChild(themeToggleItem);
+    }
 }
 
 // Load User Profile
@@ -257,6 +319,13 @@ const api = {
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize theme first
+    initTheme();
+
+    // Add theme toggle button to navbar
+    addThemeToggleButton();
+
+    // Check auth and update navigation
     initAuthCheck();
     if (isAuthenticated()) {
         updateNavigation();
