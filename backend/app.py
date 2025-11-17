@@ -28,6 +28,59 @@ class CustomJSONEncoder(json.JSONEncoder):
 app.json_encoder = CustomJSONEncoder
 
 
+# ==================== ROOT & HEALTH ENDPOINTS ====================
+
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint with API information"""
+    return jsonify({
+        'service': 'FindYourCounsellor API',
+        'version': '1.0.0',
+        'status': 'running',
+        'api_base': '/api',
+        'documentation': {
+            'health': 'GET /api/health',
+            'authentication': {
+                'register': 'POST /api/auth/register',
+                'login': 'POST /api/auth/login',
+                'me': 'GET /api/auth/me'
+            },
+            'counsellors': {
+                'search': 'GET /api/counsellors/search',
+                'details': 'GET /api/counsellors/{id}',
+                'reviews': 'GET /api/counsellors/{id}/reviews'
+            },
+            'bookings': {
+                'create': 'POST /api/bookings',
+                'my_bookings': 'GET /api/bookings/my-bookings',
+                'details': 'GET /api/bookings/{id}',
+                'update_status': 'PUT /api/bookings/{id}/status'
+            },
+            'video_sessions': {
+                'create_room': 'POST /api/sessions/{booking_id}/room',
+                'join': 'GET /api/sessions/{booking_id}/join',
+                'start': 'PUT /api/sessions/{booking_id}/start',
+                'end': 'PUT /api/sessions/{booking_id}/end'
+            },
+            'payments': {
+                'create': 'POST /api/payments/create'
+            },
+            'reviews': {
+                'create': 'POST /api/reviews'
+            },
+            'notifications': {
+                'list': 'GET /api/notifications',
+                'mark_read': 'PUT /api/notifications/{id}/read'
+            },
+            'specializations': {
+                'list': 'GET /api/specializations'
+            }
+        },
+        'frontend_url': 'http://localhost:8000',
+        'note': 'This is the backend API. Frontend should be served separately on port 8000.'
+    }), 200
+
+
 # ==================== AUTHENTICATION ENDPOINTS ====================
 
 @app.route('/api/auth/register', methods=['POST'])
