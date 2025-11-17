@@ -1,14 +1,22 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from datetime import datetime, date, time
 import json
+import os
 from decimal import Decimal
 
 from backend.config import Config
 from backend.models import User, CounsellorProfile, Booking, Payment, Review, Notification
 
-app = Flask(__name__)
+# Get the base directory (project root)
+basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Initialize Flask with custom template and static folders
+app = Flask(__name__,
+            template_folder=os.path.join(basedir, 'templates'),
+            static_folder=os.path.join(basedir, 'static'))
+
 app.config['JWT_SECRET_KEY'] = Config.JWT_SECRET_KEY
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = Config.JWT_ACCESS_TOKEN_EXPIRES
 app.config['SECRET_KEY'] = Config.SECRET_KEY
@@ -26,6 +34,49 @@ class CustomJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 app.json_encoder = CustomJSONEncoder
+
+
+# ==================== FRONTEND ROUTES ====================
+
+@app.route('/')
+def index():
+    """Serve landing page"""
+    return render_template('index.html')
+
+@app.route('/login.html')
+def login_page():
+    """Serve login page"""
+    return render_template('login.html')
+
+@app.route('/register.html')
+def register_page():
+    """Serve registration page"""
+    return render_template('register.html')
+
+@app.route('/search.html')
+def search_page():
+    """Serve counsellor search page"""
+    return render_template('search.html')
+
+@app.route('/patient-dashboard.html')
+def patient_dashboard():
+    """Serve patient dashboard page"""
+    return render_template('patient-dashboard.html')
+
+@app.route('/counsellor-dashboard.html')
+def counsellor_dashboard():
+    """Serve counsellor dashboard page"""
+    return render_template('counsellor-dashboard.html')
+
+@app.route('/admin-dashboard.html')
+def admin_dashboard():
+    """Serve admin dashboard page"""
+    return render_template('admin-dashboard.html')
+
+@app.route('/video-session.html')
+def video_session():
+    """Serve video session page"""
+    return render_template('video-session.html')
 
 
 # ==================== AUTHENTICATION ENDPOINTS ====================
@@ -438,6 +489,191 @@ def update_booking_status(booking_id):
         return jsonify({'error': str(e)}), 500
 
 
+# ==================== VIDEO SESSION ENDPOINTS ====================
+
+@app.route('/api/sessions/<int:booking_id>/room', methods=['POST'])
+@jwt_required()
+def create_session_room(booking_id):
+    """Generate video session room for a booking"""
+    try:
+        user_id = get_jwt_identity()
+        booking = Booking.get_by_id(booking_id)
+
+        if not booking:
+            return jsonify({'error': 'Booking not found'}), 404
+
+        # Verify authorization (both patient and counsellor can access)
+        user = User.get_by_id(user_id)
+        counsellor_profile = CounsellorProfile.get_by_user_id(user_id) if user['user_type'] == 'counsellor' else None
+
+        if booking['patient_id'] != user_id and (not counsellor_profile or booking['counsellor_id'] != counsellor_profile['id']):
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Check if session type supports video/audio
+        if booking['session_type'] not in ['video', 'audio']:
+            return jsonify({'error': 'This booking is not for video/audio session'}), 400
+
+        # Generate session link if not already exists
+        if not booking['session_link']:
+            import hashlib
+            import secrets
+
+            # Create a secure room name
+            room_token = secrets.token_urlsafe(16)
+            room_name = f"session-{booking_id}-{room_token}"
+
+            # Using Jitsi Meet
+            session_link = f"https://meet.jit.si/{room_name}"
+
+            # Update booking with session link
+            from backend.database import Database
+            Database.execute_query(
+                "UPDATE bookings SET session_link = %s WHERE id = %s",
+                (session_link, booking_id)
+            )
+
+            booking['session_link'] = session_link
+
+        return jsonify({
+            'session_link': booking['session_link'],
+            'booking_id': booking_id,
+            'session_type': booking['session_type']
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sessions/<int:booking_id>/join', methods=['GET'])
+@jwt_required()
+def get_session_details(booking_id):
+    """Get session details for joining"""
+    try:
+        user_id = get_jwt_identity()
+        booking = Booking.get_by_id(booking_id)
+
+        if not booking:
+            return jsonify({'error': 'Booking not found'}), 404
+
+        # Verify authorization
+        user = User.get_by_id(user_id)
+        counsellor_profile = CounsellorProfile.get_by_user_id(user_id) if user['user_type'] == 'counsellor' else None
+
+        if booking['patient_id'] != user_id and (not counsellor_profile or booking['counsellor_id'] != counsellor_profile['id']):
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Check if booking is confirmed
+        if booking['status'] not in ['confirmed', 'in-progress']:
+            return jsonify({'error': 'Booking must be confirmed to join session'}), 400
+
+        # Check if session type supports video/audio
+        if booking['session_type'] not in ['video', 'audio']:
+            return jsonify({'error': 'This booking is not for video/audio session'}), 400
+
+        # Ensure session link exists
+        if not booking['session_link']:
+            return jsonify({'error': 'Session link not generated. Please create session room first.'}), 400
+
+        # Get participant details
+        patient = User.get_by_id(booking['patient_id'])
+        counsellor_user = User.get_by_id(booking['counsellor_user_id']) if 'counsellor_user_id' in booking else None
+
+        participant_name = f"{user['first_name']} {user['last_name']}"
+        participant_role = 'counsellor' if counsellor_profile else 'patient'
+
+        return jsonify({
+            'session_link': booking['session_link'],
+            'booking_id': booking_id,
+            'session_type': booking['session_type'],
+            'session_date': booking['session_date'],
+            'session_time': booking['session_time'],
+            'duration': booking['duration'],
+            'participant_name': participant_name,
+            'participant_role': participant_role,
+            'patient_name': f"{patient['first_name']} {patient['last_name']}",
+            'counsellor_name': f"{booking['counsellor_first_name']} {booking['counsellor_last_name']}"
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sessions/<int:booking_id>/start', methods=['PUT'])
+@jwt_required()
+def start_session(booking_id):
+    """Mark session as started"""
+    try:
+        user_id = get_jwt_identity()
+        booking = Booking.get_by_id(booking_id)
+
+        if not booking:
+            return jsonify({'error': 'Booking not found'}), 404
+
+        # Verify authorization
+        user = User.get_by_id(user_id)
+        counsellor_profile = CounsellorProfile.get_by_user_id(user_id) if user['user_type'] == 'counsellor' else None
+
+        if booking['patient_id'] != user_id and (not counsellor_profile or booking['counsellor_id'] != counsellor_profile['id']):
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Update booking status to in-progress
+        if booking['status'] == 'confirmed':
+            Booking.update_status(booking_id, 'in-progress')
+
+            # Notify the other participant
+            other_user_id = booking['patient_id'] if counsellor_profile else booking['counsellor_user_id']
+            if other_user_id:
+                Notification.create(
+                    user_id=other_user_id,
+                    title='Session Started',
+                    message=f"Your session has started",
+                    notification_type='booking',
+                    related_id=booking_id
+                )
+
+        return jsonify({'message': 'Session started successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sessions/<int:booking_id>/end', methods=['PUT'])
+@jwt_required()
+def end_session(booking_id):
+    """Mark session as completed"""
+    try:
+        user_id = get_jwt_identity()
+        booking = Booking.get_by_id(booking_id)
+
+        if not booking:
+            return jsonify({'error': 'Booking not found'}), 404
+
+        # Verify authorization (typically counsellor ends the session)
+        user = User.get_by_id(user_id)
+        counsellor_profile = CounsellorProfile.get_by_user_id(user_id) if user['user_type'] == 'counsellor' else None
+
+        if booking['patient_id'] != user_id and (not counsellor_profile or booking['counsellor_id'] != counsellor_profile['id']):
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Update booking status to completed
+        if booking['status'] == 'in-progress':
+            Booking.update_status(booking_id, 'completed')
+
+            # Notify patient that session is complete
+            Notification.create(
+                user_id=booking['patient_id'],
+                title='Session Completed',
+                message=f"Your session with {booking['counsellor_first_name']} {booking['counsellor_last_name']} has been completed. Please leave a review!",
+                notification_type='booking',
+                related_id=booking_id
+            )
+
+        return jsonify({'message': 'Session ended successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # ==================== PAYMENT ENDPOINTS ====================
 
 @app.route('/api/payments/create', methods=['POST'])
@@ -640,4 +876,4 @@ def health_check():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5005)

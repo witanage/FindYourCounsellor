@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Counsellors - FindYourCounsellor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">FindYourCounsellor</a>
+            <ul class="navbar-menu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Find Counsellors</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container" style="padding: 2rem 0;">
+        <h1 class="mb-3">Find Your Counsellor</h1>
+
+        <!-- Filters -->
+        <div class="card mb-3">
+            <form id="searchForm" class="search-form">
+                <div class="form-group">
+                    <label class="form-label">Specialization</label>
+                    <select class="form-select" id="specialization">
+                        <option value="">All Specializations</option>
+                        <option value="Anxiety & Stress">Anxiety & Stress</option>
+                        <option value="Depression">Depression</option>
+                        <option value="Relationship Issues">Relationship Issues</option>
+                        <option value="Trauma & PTSD">Trauma & PTSD</option>
+                        <option value="Addiction">Addiction</option>
+                        <option value="Career Counseling">Career Counseling</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">City</label>
+                    <input type="text" class="form-input" id="city" placeholder="Enter city">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Max Rate ($/hour)</label>
+                    <input type="number" class="form-input" id="maxRate" min="0" placeholder="Any">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Min Rating</label>
+                    <select class="form-select" id="minRating">
+                        <option value="">Any Rating</option>
+                        <option value="4.5">4.5+ Stars</option>
+                        <option value="4.0">4.0+ Stars</option>
+                        <option value="3.5">3.5+ Stars</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="display: flex; align-items: flex-end;">
+                    <button type="submit" class="btn btn-primary btn-block">Search</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results -->
+        <div id="results">
+            <div class="text-center" style="padding: 3rem;">
+                <p>Loading counsellors...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Book Session</h2>
+                <button class="modal-close" onclick="closeModal('bookingModal')">&times;</button>
+            </div>
+            <form id="bookingForm">
+                <input type="hidden" id="selectedCounsellorId">
+
+                <div class="form-group">
+                    <label class="form-label">Session Date</label>
+                    <input type="date" class="form-input" id="sessionDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Session Time</label>
+                    <input type="time" class="form-input" id="sessionTime" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Duration (minutes)</label>
+                    <select class="form-select" id="duration" required>
+                        <option value="30">30 minutes</option>
+                        <option value="45">45 minutes</option>
+                        <option value="60" selected>60 minutes</option>
+                        <option value="90">90 minutes</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Session Type</label>
+                    <select class="form-select" id="sessionType" required>
+                        <option value="video">Video Consultation</option>
+                        <option value="audio">Audio Consultation</option>
+                        <option value="chat">Chat Consultation</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Notes (Optional)</label>
+                    <textarea class="form-textarea" id="patientNotes" rows="3" placeholder="Share any specific concerns or topics you'd like to discuss"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Proceed to Payment</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Override auth check
+        function initAuthCheck() {
+            if (isAuthenticated()) {
+                updateNavigation();
+            }
+        }
+
+        let currentCounsellors = [];
+
+        async function loadCounsellors(filters = {}) {
+            try {
+                const data = await searchCounsellors(filters);
+                currentCounsellors = data.counsellors;
+                displayCounsellors(data.counsellors);
+            } catch (error) {
+                document.getElementById('results').innerHTML = `
+                    <div class="card">
+                        <p class="text-center">Error loading counsellors: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayCounsellors(counsellors) {
+            const resultsDiv = document.getElementById('results');
+
+            if (counsellors.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="card">
+                        <p class="text-center">No counsellors found matching your criteria.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            resultsDiv.innerHTML = counsellors.map(counsellor => {
+                const specializations = JSON.parse(counsellor.specializations || '[]');
+                return `
+                    <div class="card counsellor-card">
+                        <img src="${counsellor.profile_image || 'https://via.placeholder.com/100'}"
+                             alt="${counsellor.first_name} ${counsellor.last_name}"
+                             class="counsellor-avatar">
+
+                        <div class="counsellor-info">
+                            <h3>${counsellor.first_name} ${counsellor.last_name}</h3>
+                            <div class="counsellor-specialization">
+                                ${specializations.slice(0, 3).join(', ')}
+                            </div>
+                            <div class="counsellor-rating">
+                                <span class="stars">${getStarRating(parseFloat(counsellor.rating))}</span>
+                                <span>${parseFloat(counsellor.rating).toFixed(1)} (${counsellor.total_reviews} reviews)</span>
+                            </div>
+                            <div class="counsellor-details">
+                                <span>📍 ${counsellor.city || 'Online'}</span>
+                                <span>💼 ${counsellor.years_of_experience} years exp.</span>
+                                <span>✓ ${counsellor.total_sessions} sessions</span>
+                            </div>
+                            <p class="mt-2">${counsellor.bio ? counsellor.bio.substring(0, 150) + '...' : 'Professional counsellor'}</p>
+                        </div>
+
+                        <div class="counsellor-price">
+                            <div class="price-amount">${formatCurrency(counsellor.hourly_rate)}</div>
+                            <div class="price-unit">per hour</div>
+                            <button class="btn btn-primary mt-2" onclick="bookCounsellor(${counsellor.id})">
+                                Book Now
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function bookCounsellor(counsellorId) {
+            if (!isAuthenticated()) {
+                showNotification('Please login to book a session', 'error');
+                setTimeout(() => window.location.href = 'login.html', 1500);
+                return;
+            }
+
+            const user = getCurrentUser();
+            if (user.user_type !== 'patient') {
+                showNotification('Only patients can book sessions', 'error');
+                return;
+            }
+
+            document.getElementById('selectedCounsellorId').value = counsellorId;
+
+            // Set minimum date to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('sessionDate').min = tomorrow.toISOString().split('T')[0];
+
+            openModal('bookingModal');
+        }
+
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const filters = {};
+
+            const specialization = document.getElementById('specialization').value;
+            if (specialization) filters.specialization = specialization;
+
+            const city = document.getElementById('city').value;
+            if (city) filters.city = city;
+
+            const maxRate = document.getElementById('maxRate').value;
+            if (maxRate) filters.max_rate = maxRate;
+
+            const minRating = document.getElementById('minRating').value;
+            if (minRating) filters.min_rating = minRating;
+
+            loadCounsellors(filters);
+        });
+
+        document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const bookingData = {
+                counsellor_id: parseInt(document.getElementById('selectedCounsellorId').value),
+                session_date: document.getElementById('sessionDate').value,
+                session_time: document.getElementById('sessionTime').value + ':00',
+                duration: parseInt(document.getElementById('duration').value),
+                session_type: document.getElementById('sessionType').value,
+                patient_notes: document.getElementById('patientNotes').value
+            };
+
+            try {
+                const data = await createBooking(bookingData);
+                showNotification('Booking created successfully!', 'success');
+
+                closeModal('bookingModal');
+
+                // Process payment
+                setTimeout(async () => {
+                    try {
+                        await processPayment({
+                            booking_id: data.booking_id,
+                            payment_method: 'card',
+                            transaction_id: 'TXN' + Date.now()
+                        });
+                        showNotification('Payment processed successfully!', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'patient-dashboard.html';
+                        }, 1500);
+                    } catch (error) {
+                        showNotification('Payment failed: ' + error.message, 'error');
+                    }
+                }, 1000);
+            } catch (error) {
+                showNotification('Booking failed: ' + error.message, 'error');
+            }
+        });
+
+        // Load initial results
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialFilters = {};
+        if (urlParams.get('specialization')) {
+            initialFilters.specialization = urlParams.get('specialization');
+            document.getElementById('specialization').value = urlParams.get('specialization');
+        }
+        if (urlParams.get('city')) {
+            initialFilters.city = urlParams.get('city');
+            document.getElementById('city').value = urlParams.get('city');
+        }
+
+        loadCounsellors(initialFilters);
+    </script>
+</body>
+</html>
