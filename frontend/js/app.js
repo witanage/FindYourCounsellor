@@ -236,6 +236,25 @@ async function markNotificationRead(notificationId) {
     });
 }
 
+// Video Session API
+const api = {
+    get: async (endpoint) => {
+        return await apiRequest(endpoint, { method: 'GET' });
+    },
+    post: async (endpoint, data) => {
+        return await apiRequest(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+    put: async (endpoint, data) => {
+        return await apiRequest(endpoint, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    }
+};
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     initAuthCheck();

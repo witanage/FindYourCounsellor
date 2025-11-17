@@ -279,6 +279,28 @@ class Booking:
             query = "UPDATE bookings SET status = %s WHERE id = %s"
             Database.execute_query(query, (status, booking_id))
 
+        # Auto-generate session link when booking is confirmed
+        if status == 'confirmed':
+            # Get booking details
+            booking = Booking.get_by_id(booking_id)
+
+            # Only generate for video/audio sessions that don't have a link yet
+            if booking and booking['session_type'] in ['video', 'audio'] and not booking['session_link']:
+                import secrets
+
+                # Create a secure room name
+                room_token = secrets.token_urlsafe(16)
+                room_name = f"session-{booking_id}-{room_token}"
+
+                # Using Jitsi Meet
+                session_link = f"https://meet.jit.si/{room_name}"
+
+                # Update booking with session link
+                Database.execute_query(
+                    "UPDATE bookings SET session_link = %s WHERE id = %s",
+                    (session_link, booking_id)
+                )
+
     @staticmethod
     def check_availability(counsellor_id, session_date, session_time, duration):
         """Check if counsellor is available at given time"""

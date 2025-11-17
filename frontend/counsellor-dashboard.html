@@ -257,13 +257,22 @@
                         </div>
                     </div>
                     ${booking.patient_notes ? `<p class="mt-2"><strong>Patient Notes:</strong> ${booking.patient_notes}</p>` : ''}
-                    ${booking.status === 'confirmed' ? `
-                        <div class="mt-2">
-                            <button class="btn btn-success" onclick="markAsCompleted(${booking.id})">Mark as Completed</button>
-                        </div>
-                    ` : ''}
+                    <div class="mt-2" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        ${(booking.status === 'confirmed' || booking.status === 'in-progress') && (booking.session_type === 'video' || booking.session_type === 'audio') ? `
+                            <button class="btn btn-success" onclick="joinSession(${booking.id})" style="background: #10b981;">
+                                🎥 Join ${booking.session_type === 'video' ? 'Video' : 'Audio'} Session
+                            </button>
+                        ` : ''}
+                        ${booking.status === 'confirmed' ? `
+                            <button class="btn btn-primary" onclick="markAsCompleted(${booking.id})">Mark as Completed</button>
+                        ` : ''}
+                    </div>
                 </div>
             `).join('');
+        }
+
+        function joinSession(bookingId) {
+            window.location.href = `video-session.html?booking_id=${bookingId}`;
         }
 
         async function acceptBooking(bookingId) {

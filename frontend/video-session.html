@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Session - FindYourCounsellor</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://meet.jit.si/external_api.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+        }
+
+        .video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .session-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+
+        .session-info h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .session-info p {
+            margin: 0.25rem 0 0 0;
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .session-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .session-timer {
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        #jitsiContainer {
+            flex: 1;
+            width: 100%;
+            height: calc(100% - 80px);
+        }
+
+        .btn-end-session {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-end-session:hover {
+            background: #c0392b;
+            transform: scale(1.05);
+        }
+
+        .loading-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-screen {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .error-screen h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .error-screen p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn-back {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .btn-back:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <h2>Preparing your session...</h2>
+        <p>Please wait while we connect you</p>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="errorScreen" class="error-screen">
+        <h1>⚠️</h1>
+        <h2 id="errorTitle">Unable to Join Session</h2>
+        <p id="errorMessage">There was a problem joining the session.</p>
+        <button class="btn-back" onclick="goBack()">Go Back to Dashboard</button>
+    </div>
+
+    <!-- Video Container -->
+    <div id="videoContainer" class="video-container" style="display: none;">
+        <div class="session-header">
+            <div class="session-info">
+                <h2 id="sessionTitle">Video Session</h2>
+                <p id="sessionParticipants">Loading session details...</p>
+            </div>
+            <div class="session-controls">
+                <div class="session-timer" id="sessionTimer">00:00</div>
+                <button class="btn-end-session" onclick="endSession()">End Session</button>
+            </div>
+        </div>
+        <div id="jitsiContainer"></div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let jitsiApi = null;
+        let sessionStartTime = null;
+        let timerInterval = null;
+        let bookingId = null;
+        let sessionData = null;
+
+        // Get booking ID from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        bookingId = urlParams.get('booking_id');
+
+        if (!bookingId) {
+            showError('Invalid Session', 'No booking ID provided. Please use the link from your dashboard.');
+        } else {
+            initializeSession();
+        }
+
+        async function initializeSession() {
+            try {
+                // Check authentication
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // Get session details
+                const response = await api.get(`/sessions/${bookingId}/join`);
+                sessionData = response;
+
+                // Update session info
+                document.getElementById('sessionTitle').textContent =
+                    `${sessionData.session_type === 'video' ? 'Video' : 'Audio'} Session`;
+                document.getElementById('sessionParticipants').textContent =
+                    `${sessionData.patient_name} with ${sessionData.counsellor_name}`;
+
+                // Create/get session room
+                try {
+                    await api.post(`/sessions/${bookingId}/room`, {});
+                } catch (error) {
+                    // Room might already exist, that's okay
+                    console.log('Room already exists or created');
+                }
+
+                // Start the session
+                await api.put(`/sessions/${bookingId}/start`, {});
+
+                // Initialize Jitsi Meet
+                loadJitsiMeet();
+
+            } catch (error) {
+                console.error('Failed to initialize session:', error);
+                showError('Session Error', error.message || 'Unable to join the session. Please try again later.');
+            }
+        }
+
+        function loadJitsiMeet() {
+            // Extract room name from session link
+            const roomName = sessionData.session_link.split('/').pop();
+
+            const domain = 'meet.jit.si';
+            const options = {
+                roomName: roomName,
+                width: '100%',
+                height: '100%',
+                parentNode: document.getElementById('jitsiContainer'),
+                configOverride: {
+                    startWithAudioMuted: false,
+                    startWithVideoMuted: sessionData.session_type === 'audio',
+                    enableWelcomePage: false,
+                    prejoinPageEnabled: false,
+                    disableDeepLinking: true
+                },
+                interfaceConfigOverride: {
+                    TOOLBAR_BUTTONS: [
+                        'microphone', 'camera', 'closedcaptions', 'desktop',
+                        'fullscreen', 'fodeviceselection', 'hangup', 'profile',
+                        'chat', 'recording', 'etherpad', 'settings', 'raisehand',
+                        'videoquality', 'filmstrip', 'stats', 'shortcuts',
+                        'tileview', 'help'
+                    ],
+                    SHOW_JITSI_WATERMARK: false,
+                    SHOW_BRAND_WATERMARK: false,
+                    SHOW_POWERED_BY: false,
+                    DEFAULT_REMOTE_DISPLAY_NAME: 'Participant',
+                    DISABLE_JOIN_LEAVE_NOTIFICATIONS: false
+                },
+                userInfo: {
+                    displayName: sessionData.participant_name
+                }
+            };
+
+            // If audio-only session, force camera off
+            if (sessionData.session_type === 'audio') {
+                options.configOverride.startWithVideoMuted = true;
+                options.configOverride.disableVideoMuting = false;
+            }
+
+            jitsiApi = new JitsiMeetExternalAPI(domain, options);
+
+            // Hide loading screen, show video container
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('videoContainer').style.display = 'flex';
+
+            // Start session timer
+            sessionStartTime = Date.now();
+            startTimer();
+
+            // Event listeners
+            jitsiApi.addEventListener('videoConferenceJoined', () => {
+                console.log('User joined the conference');
+            });
+
+            jitsiApi.addEventListener('videoConferenceLeft', () => {
+                handleSessionEnd();
+            });
+
+            jitsiApi.addEventListener('readyToClose', () => {
+                handleSessionEnd();
+            });
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - sessionStartTime;
+                const minutes = Math.floor(elapsed / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                document.getElementById('sessionTimer').textContent =
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        async function endSession() {
+            if (confirm('Are you sure you want to end this session?')) {
+                try {
+                    // Close Jitsi
+                    if (jitsiApi) {
+                        jitsiApi.dispose();
+                    }
+
+                    // Stop timer
+                    if (timerInterval) {
+                        clearInterval(timerInterval);
+                    }
+
+                    // Mark session as ended
+                    await api.put(`/sessions/${bookingId}/end`, {});
+
+                    // Redirect back to dashboard
+                    goBack();
+                } catch (error) {
+                    console.error('Error ending session:', error);
+                    // Still redirect even if API call fails
+                    goBack();
+                }
+            }
+        }
+
+        function handleSessionEnd() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+
+            // Wait a bit before redirecting to allow cleanup
+            setTimeout(() => {
+                goBack();
+            }, 1000);
+        }
+
+        function showError(title, message) {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('videoContainer').style.display = 'none';
+            document.getElementById('errorScreen').style.display = 'flex';
+            document.getElementById('errorTitle').textContent = title;
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function goBack() {
+            const user = JSON.parse(localStorage.getItem('current_user') || '{}');
+            if (user.user_type === 'counsellor') {
+                window.location.href = 'counsellor-dashboard.html';
+            } else {
+                window.location.href = 'patient-dashboard.html';
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (jitsiApi) {
+                jitsiApi.dispose();
+            }
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+        });
+    </script>
+</body>
+</html>
