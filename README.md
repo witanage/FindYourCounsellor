@@ -148,7 +148,7 @@ cd backend
 python app.py
 ```
 
-The backend API will run on `http://localhost:5000`
+The backend API will run on `http://localhost:5005`
 
 #### Serve the Frontend
 You can use any static file server. Here are a few options:
@@ -178,12 +178,13 @@ The frontend will be available at `http://localhost:8000`
 - **Counsellor Registration**: http://localhost:8000/register.html?type=counsellor
 - **Login**: http://localhost:8000/login.html
 - **Admin Login**: Use email: `admin@counselling.com`, password: `admin123`
+- **Backend API**: http://localhost:5005
 
 ## API Documentation
 
 ### Base URL
 ```
-http://localhost:5000/api
+http://localhost:5005/api
 ```
 
 ### Authentication
@@ -547,8 +548,8 @@ mysql -u root -p -e "SHOW GRANTS FOR 'your_user'@'localhost';"
 ### CORS Issues
 If you encounter CORS errors, ensure:
 1. Flask-CORS is installed
-2. Backend is running on port 5000
-3. Frontend is accessing the correct API URL
+2. Backend is running on port 5005
+3. Frontend is accessing the correct API URL (http://localhost:5005/api)
 
 ### JWT Token Issues
 - Tokens expire after 24 hours
